@@ -1,0 +1,9 @@
+
+bool clear_workplace
+bool pause
+bool reset
+float32 linear_velocity
+float32 angular_velocity
+float32 hydraulics_velocity
+float32 loader_velocity
+float32 brackets_velocity
