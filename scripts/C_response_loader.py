@@ -5,12 +5,12 @@ import pprint
 import rospy
 from gazebo_msgs.srv import ApplyBodyWrench, GetModelState, GetLinkState
 from gazebo_msgs.msg import ContactsState
-from geometry_msgs.msg import Pose, Wrench
+from geometry_msgs.msg import Pose, Wrench, Quaternion
 from sensor_msgs.msg import Imu
-import numpy as np
+from tf.transformations import euler_from_quaternion, quaternion_from_euler
+from std_msgs.msg import Float64
 import PID
 import numpy as np
-import re
 import math
 
 
@@ -28,10 +28,6 @@ def main():
     rospy.spin()
 
 
-def clamp(x, minimum, maximum):
-    return max(minimum, min(x, maximum))
-
-
 class Controller:
     rospy.init_node(node_name, anonymous=True)
     ns = rospy.get_namespace()
@@ -45,10 +41,9 @@ class Controller:
     else:
         topic_states = 'link_states'
 
-    # kP = 10
-    # kD = 0.1
-    # kI = 0.01
-    K0 = 50000
+    K0 = 20.4  # penetration resistance of Sandy loamy soddy-podzolic soil g/cm^2
+    density = 1500  # density of Sandy loamy soddy-podzolic soil in kg/m^3
+    matirial_gravity = 2650  # specific gravity of material g/cm^3
     S = 0.04342
     res_wrench = Wrench()
     res_wrench.force.x = 0
@@ -63,6 +58,10 @@ class Controller:
     depth = 0
     angular_vel = 0
     m = (2.7692)/(0.9538 + 0.2)  # the slope of the pile
+    z_collision = 0
+    roll = pitch = yaw=0
+    orientation_q = Quaternion()
+
 
     def get_depth(self, data):
         if (ContactsState.states != []):
@@ -70,10 +69,14 @@ class Controller:
          for i in range(len(data.states)):
                  if ('box' in data.states[i].collision2_name) or ('box' in data.states[i].collision1_name):  # check that the string exist in collision2_name/1
                            self.depth = np.mean(data.states[i].depths)
+                           self.z_collision = np.mean(data.states[i].contact_positions[0].z)
                            # rospy.loginfo(self.depth)
 
     def get_angular_vel(self, msg):
         self.angular_vel = msg.angular_velocity.y
+        orientation_q = msg.orientation
+        orientation_list = [orientation_q.x, orientation_q.y, orientation_q.z, orientation_q.w]
+        (self.roll, self.pitch, self.yaw) = euler_from_quaternion (orientation_list)
 
     def __init__(self):
         rospy.wait_for_service('/gazebo/get_model_state')
@@ -89,18 +92,23 @@ class Controller:
         while not rospy.is_shutdown():
             self.loader_pos = self.get_link_state('Bobby::loader', 'world').link_state.pose
             # self.box2_pos = self.get_model_state('box', 'world').pose
-            H = self.m *(self.loader_pos.position.x + 0.42 + 0.2)  # 0.42 is the distance between center mass of the loader to the end
-            print("x loader:", self.loader_pos.position.x)
-            print(H)
-            if self.depth > 0:
-                         self.res_wrench.force.x = -(self.K0 * math.cos(self.angular_vel) * self.depth * self.S * 9.81)
-
+            z_pile = self.m * (self.loader_pos.position.x + 0.96 + 0.2)  # 0.96 is the distance between center mass of the loader to the end
+            H = z_pile - self.z_collision
+            # print("z collision:", self.z_collision)
+            # print(H)
+            # print(self.depth)
+            if self.depth > 0.001:
+                         F2 = self.K0 * math.cos(self.angular_vel) * self.matirial_gravity * H * self.S * 9.81
+                         self.res_wrench.force.x = -(F2* math.cos(self.pitch))
+                         self.res_wrench.force.z = -(((self.depth * H *1.66 *self.density) / 2) * 9.81 + F2 * math.sin(self.pitch))  # 1.66 is the tool width
+            if self.depth <= 0.001:
+                         self.res_wrench.force.x = 0
+                         self.res_wrench.force.z = 0
             self.apply_body_wrench(body_name=body_name,
                                             reference_frame="",
                                             wrench=self.res_wrench,
                                             start_time=rospy.Time.from_sec(0),
                                             duration=rospy.Duration.from_sec(1.0))
-
             self.pub.publish(self.res_wrench)
             self.rate.sleep()
 

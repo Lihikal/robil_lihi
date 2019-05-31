@@ -74,7 +74,7 @@ class Controller:
         rospy.wait_for_service('/gazebo/apply_body_wrench')
         self.apply_body_wrench = rospy.ServiceProxy('/gazebo/apply_body_wrench', ApplyBodyWrench)
         self.pub = rospy.Publisher('/new_position', Pose, queue_size=10)
-        self.pub2 = rospy.Publisher('/force', Wrench, queue_size=10)  # publisher to the force on the box
+        self.pub2 = rospy.Publisher('/force', Wrench, queue_size=10)  # publisher to the force on the bobcat
 
         rospy.Subscriber('/new_position', Pose, self.do)  # subscriber to the user new position
         self.srv = Server(PIDconConfig, callback)
