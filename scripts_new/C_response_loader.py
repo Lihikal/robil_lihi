@@ -41,10 +41,17 @@ class Controller:
     else:
         topic_states = 'link_states'
 
+ ## soil parameters
+
     K0 = 20.4  # penetration resistance of Sandy loamy soddy-podzolic soil g/cm^2
     density = 1500  # density of Sandy loamy soddy-podzolic soil in kg/m^3
     matirial_gravity = 2650  # specific gravity of material g/cm^3
+
+ ## tool parameters
     S = 0.04342
+
+ ## definitions
+
     res_wrench = Wrench()
     res_wrench.force.x = 0
     res_wrench.force.y = 0
@@ -53,16 +60,14 @@ class Controller:
     res_wrench.torque.y = 0
     res_wrench.torque.z = 0
     loader_pos = Pose()
-    hyd_pos = Twist()
-    box2_pos = Pose()
     contacts = ContactsState()
+    orientation_q = Quaternion()
+
     depth = 0
     angular_vel = 0
     m = (2.7692)/(0.9538 + 0.2)  # the slope of the pile
     z_collision = 0
     roll = pitch = yaw = 0
-    orientation_q = Quaternion()
-
 
     def get_depth(self, data):
         if (ContactsState.states != []):
@@ -107,11 +112,11 @@ class Controller:
             if self.depth <= 0.001:
                          self.res_wrench.force.x = 0
                          self.res_wrench.force.z = 0
-            # self.apply_body_wrench(body_name=body_name,
-            #                                 reference_frame="",
-            #                                 wrench=self.res_wrench,
-            #                                 start_time=rospy.Time.from_sec(0),
-            #                                 duration=rospy.Duration.from_sec(1.0))
+            self.apply_body_wrench(body_name=body_name,
+                                            reference_frame="",
+                                            wrench=self.res_wrench,
+                                            start_time=rospy.Time.from_sec(0),
+                                            duration=rospy.Duration.from_sec(1.0))
             self.pub.publish(self.res_wrench)
             self.rate.sleep()
 

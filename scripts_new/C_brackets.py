@@ -54,8 +54,8 @@ class Controller:
     req.joint_name = joint_name
 
     kP = 1000
-    kD = 10# * 1e3
-    kI = 0.1# * 1e3
+    kD = 0 # 10
+    kI = 0# 0.1
 
     state = 0
     position_SP = 0

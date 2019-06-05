@@ -98,11 +98,11 @@ class Controller:
 
 
             try:
-                # self.apply_body_wrench(body_name=body_name,
-                #                        reference_frame="",
-                #                        wrench=self.wrench,
-                #                        start_time=rospy.Time.from_sec(0),
-                #                        duration=rospy.Duration.from_sec(1.0))
+                self.apply_body_wrench(body_name=body_name,
+                                       reference_frame="",
+                                       wrench=self.wrench,
+                                       start_time=rospy.Time.from_sec(0),
+                                       duration=rospy.Duration.from_sec(1.0))
                 if(self.wrench.force.x > 0):
                     rospy.set_param('direction', 1)
                 elif(self.wrench.force.x < 0):
