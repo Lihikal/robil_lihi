@@ -53,9 +53,9 @@ class Controller:
     req.duration.nsecs = int(1e9 / Hz)
     req.joint_name = joint_name
 
-    kP = 150000
-    kD = 50000
-    kI = 15000
+    kP = 150000  # 150000
+    kD = 50000  # 50000
+    kI = 15000  # 15000
 
     state = 0
     position_SP = 0
