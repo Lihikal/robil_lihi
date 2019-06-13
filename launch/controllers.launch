@@ -8,6 +8,9 @@
 
     <!--<node ns="$(arg robot_name)" name="SimulationControl" pkg="robil_lihi" type="C_simulation.py"
           respawn="$(arg autorespawn)" output="screen"/>-->
+    <!--<node ns="$(arg robot_name)" name="bobcat_arm_plugin" pkg="robil_lihi" type="bobcat_arm_plugin" />-->
+    <!--<node ns="$(arg robot_name)" name="bobcat_drive_plugin" pkg="robil_lihi" type="bobcat_drive_plugin" />-->
+    <!--<node ns="$(arg robot_name)" name="bobcat_arm_ros_controller_interface" pkg="robil_lihi" type="bobcat_arm_ros_controller_interface_node" cwd="node" output="screen" />-->
 
     <node ns="$(arg robot_name)" name="joint_state_publisher" pkg="robil_lihi" type="custom_joint_state_publisher.py"
           respawn="$(arg autorespawn)" output="screen"/>
