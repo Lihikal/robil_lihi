@@ -43,8 +43,8 @@ class Controller:
 
  ## soil parameters
 
-    K0 = 20.4  # penetration resistance of Sandy loamy soddy-podzolic soil g/cm^2
-    density = 1500  # density of Sandy loamy soddy-podzolic soil in kg/m^3
+    K0 = 20.4                # penetration resistance of Sandy loamy soddy-podzolic soil g/cm^2
+    density = 1500           # density of Sandy loamy soddy-podzolic soil in kg/m^3
     matirial_gravity = 2650  # specific gravity of material g/cm^3
 
  ## tool parameters
