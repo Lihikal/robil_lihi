@@ -2,7 +2,7 @@
     <arg name="rqt" default="true"/>
     <arg name="robot_name" default="Bobby"/>
     <arg name="controllers" default="true"/>
-    <arg name="joystick_connected" default="false"/>
+    <arg name="joystick_connected" default="true"/>
     <arg name="joy_device" default="/dev/input/js0"/>
     <arg name="autorespawn" default="true"/>
 
@@ -16,11 +16,19 @@
           respawn="$(arg autorespawn)" output="screen"/>
     <node ns="$(arg robot_name)" name="control_hydraulics" pkg="robil_lihi" type="C_hydraulics.py"
           respawn="$(arg autorespawn)" output="screen"/>
-    <node ns="$(arg robot_name)" name="control_loader" pkg="robil_lihi" type="C_loader.py"
-          respawn="$(arg autorespawn)" output="screen"/>
-    <node ns="$(arg robot_name)" name="control_brackets" pkg="robil_lihi" type="C_brackets.py"
-          respawn="$(arg autorespawn)" output="screen"/>
+    <!--<node ns="$(arg robot_name)" name="control_loader" pkg="robil_lihi" type="C_loader.py"
+          respawn="$(arg autorespawn)" output="screen"/>-->
+    <!--<node ns="$(arg robot_name)" name="control_brackets" pkg="robil_lihi" type="C_brackets.py"
+          respawn="$(arg autorespawn)" output="screen"/>-->
     <node ns="$(arg robot_name)" name="control_wheels" pkg="robil_lihi" type="C_wheels.py"
           respawn="$(arg autorespawn)" output="screen"/>
+    <group if="$(arg joystick_connected)">
+        <node ns="$(arg robot_name)" name="joy_listener" pkg="robil_lihi" type="joy_listener.py" respawn="$(arg autorespawn)" output="screen"/>
+        <node respawn="$(arg autorespawn)" pkg="joy"
+              type="joy_node" name="joy" >
+            <param name="dev" type="string" value="$(arg joy_device)"/>
+            <param name="deadzone" value="0.1" />
+        </node>
+    </group>
 
 </launch>
