@@ -99,6 +99,8 @@ class Controller:
                                                             angular_velocity_multiplier * ang)
         self.r_BLw_effort.effort = self.force_multiplier * (linear_velocity_multiplier * lin -
                                                             angular_velocity_multiplier * ang)
+        # print("force on wheel:", self.r_FRw_effort.effort)
+
 
     def apply_efforts(self):
 

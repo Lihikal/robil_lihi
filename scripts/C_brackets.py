@@ -6,6 +6,8 @@ from robil_lihi.msg import BobcatControl
 from gazebo_msgs.srv import *
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Float32
+from dynamic_reconfigure.server import Server
+from robil_lihi.cfg import PIDconConfig
 
 import PID
 
@@ -21,6 +23,13 @@ def main():
     Controller()
     rospy.spin()
 
+# def callback(config, level):
+#     rospy.loginfo("""Reconfigure Request: {kP}, {kI}, {kD}""".format(**config))
+#     global kP, kI, kD
+#     kP = config["kP"]
+#     kI = config["kI"]
+#     kD = config["kD"]
+#     return config
 
 def clamp(x, minimum, maximum):
     return max(minimum, min(x, maximum))
@@ -44,9 +53,9 @@ class Controller:
     req.duration.nsecs = int(1e9 / Hz)
     req.joint_name = joint_name
 
-    kP = 1 * 1e3
-    kD = 0 * 1e3
-    kI = 0 * 1e3
+    kP = 1000
+    kD = 0 # 10
+    kI = 0# 0.1
 
     state = 0
     position_SP = 0
@@ -64,11 +73,15 @@ class Controller:
         rospy.Subscriber(self.topic_CMD, BobcatControl, self.update_cmd)
         rospy.Subscriber(self.topic_states, JointState, self.update_state)
 
+        # self.srv = Server(PIDconConfig, callback)
+        # self.pid = PID.PID(kP, kI, kD)
+
         self.pid = PID.PID(self.kP, self.kI, self.kD)
 
         self.pid.setSampleTime(1.0 / self.Hz)
 
         while not rospy.is_shutdown():
+            # self.pid = PID.PID(kP, kI, kD)
             self.position_SP = clamp(self.position_SP + self.cmd * 0.8 / self.Hz, self.min_position, self.max_position)
             self.pid.SetPoint = self.position_SP
             self.pid.update(self.state)

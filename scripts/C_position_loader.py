@@ -22,7 +22,7 @@ kI = 0.01  # 0 * 1e3
 
 
 def main():
-    Controller()
+    Position()
     rospy.spin()
 
 
@@ -35,7 +35,7 @@ def callback(config, level):
     return config
 
 
-class Controller:
+class Position:
     rospy.init_node(node_name, anonymous=True)
     ns = rospy.get_namespace()
 
@@ -87,7 +87,7 @@ class Controller:
 
 
         while not rospy.is_shutdown():
-            self.curr_pos = self.get_link_state('Bobby::loader', 'world').link_state.pose
+            self.curr_pos = self.get_link_state('Bobby::body', 'world').link_state.pose
             self.pidx.SetPoint = self.new_pos.position.x
             self.pidx.update(self.curr_pos.position.x)
             self.wrench.force.x = self.pidx.output
@@ -98,11 +98,11 @@ class Controller:
 
 
             try:
-                self.apply_body_wrench(body_name=body_name,
-                                       reference_frame="",
-                                       wrench=self.wrench,
-                                       start_time=rospy.Time.from_sec(0),
-                                       duration=rospy.Duration.from_sec(1.0))
+                # self.apply_body_wrench(body_name=body_name,
+                #                        reference_frame="",
+                #                        wrench=self.wrench,
+                #                        start_time=rospy.Time.from_sec(0),
+                #                        duration=rospy.Duration.from_sec(1.0))
                 if(self.wrench.force.x > 0):
                     rospy.set_param('direction', 1)
                 elif(self.wrench.force.x < 0):
