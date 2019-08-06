@@ -34,7 +34,8 @@ def read_file(file_name):
     result = np.array(list(csv.reader(open(file_name, "r"), delimiter=","))).astype("float")
     inputs = np.array([result[:, 1], result[:, 2],result[:, 3]], dtype='float')
     inputs = np.transpose(inputs)
-    targets = result[:, 0]
+    targets = np.array([result[:, 0]],dtype='float')
+    targets = np.transpose(targets)
     return inputs, targets
 
 
@@ -50,15 +51,15 @@ def check_soil(inputs, targets):
 
     # inputs, targets = read_file('digits_train.txt')
     p1 = backprop(n, m, h)  # build new backprop
-    p1.train(inputs, targets, iterations, eta)  # train the backprop
-    p1.save(p1, "soil.wgt")
+    # p1.train(inputs, targets, iterations, eta)  # train the backprop
+    # p1.save(p1, "soil.wgt")
 
-    # p1 = p1.load("part3.wgt")
+    p1 = p1.load("soil.wgt")
 
-    # inputs_test, targets_test, labels_test = read_file('digits_test.txt')
-    # result = p1.test(inputs_test)
-    # results = result > threshold
-
+    inputs_test, targets_test = read_file('scores_test.csv')
+    result = p1.test(inputs_test)
+    results = result > threshold
+    print(results)
 
 if __name__ == '__main__':
     inputs, targets = read_file("scores.csv")
