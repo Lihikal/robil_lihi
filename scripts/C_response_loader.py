@@ -15,8 +15,21 @@ import math
 from create_file import create
 from read_file import read_file, check_soil
 from robil_lihi.msg import BobcatControl
+from sensor_msgs.msg import Joy
 
+"""
+-=soil parameters=-
+type     | K0      |density  | matirial gravity
+```   ```|`````````|`````````|``````
+dry sand |    20   |  1441   |   1602
+wet sand |    12   |  1922   |   2082
+garbel   |    X    |         |
+  3      |    Y    |
+  4      |    LB   |
+  5      |    RB   |
 
+`````````````````````````````````````````````
+"""
 pp = pprint.PrettyPrinter(indent=4)
 
 model_name = 'Bobby'
@@ -44,12 +57,11 @@ class Controller:
     else:
         topic_states = 'link_states'
 
- ## soil parameters
-
-    soil = "dry_sand"
-    K0 = 20  # penetration resistance of material
-    density = 1441  # density of material in kg/m^3
-    matirial_gravity = 1602  # specific gravity of material g/cm^3
+    soil_type = {"dry_sand": 0, "wet_sand": 1} #, "garbel": 2}
+    soil = "wet_sand"
+    K0 = 12  # penetration resistance of material
+    density = 1922  # density of material in kg/m^3
+    matirial_gravity = 2082  # specific gravity of material g/cm^3
 
  ## tool parameters
     S = 0.04342
@@ -70,6 +82,7 @@ class Controller:
     contacts = ContactsState()
     orientation_q = Quaternion()
     force_on_bobcat = 0
+    joy_val = 0
 
     depth = 0
     angular_vel = 0
@@ -77,7 +90,6 @@ class Controller:
     z_collision = 0
     roll = pitch = yaw = 0
 
-    soil_type = {"dry_sand": 1, "wet_sand": 2, "garbel": 3}
 
     def get_depth(self, data):
         if (ContactsState.states != []):
@@ -100,6 +112,9 @@ class Controller:
         self.force_on_bobcat = 4* self.force_multiplier * (self.linear_velocity_multiplier * lin +
                                                             self.angular_velocity_multiplier * ang)
 
+    def get_joy(self, msg):
+        self.joy_val = msg.linear_velocity
+
     def __init__(self):
         rospy.wait_for_service('/gazebo/get_model_state')
         self.get_model_state = rospy.ServiceProxy("/gazebo/get_model_state", GetModelState)
@@ -111,7 +126,9 @@ class Controller:
         rospy.Subscriber('/robot_bumper', ContactsState, self.get_depth)
         rospy.Subscriber('/Bobby/imu', Imu, self.get_angular_vel)
         rospy.Subscriber('/Bobby/controlCMD', BobcatControl, self.get_linear_vel)
-
+        rospy.Subscriber('/joy', Joy, self.get_joy)
+        inputs, targets = read_file("scores.csv")
+        check_soil(inputs, targets)
 
         while not rospy.is_shutdown():
 
@@ -122,18 +139,15 @@ class Controller:
             # print("z collision:", self.z_collision)
             # print(H)
             # print(self.depth)
-            inputs, targets = read_file("scores.csv")
-            check_soil(inputs, targets)
-            # print (inputs)
 
-            if self.depth > 0.001:
+
+            if self.depth > 0.001 and self.force_on_bobcat!= 0:
                          F2 = self.K0 * math.cos(self.angular_vel) * self.matirial_gravity * H * self.S * 9.81
                          self.res_wrench.force.x = -(F2* math.cos(self.pitch))
                          self.res_wrench.force.z = -(((self.depth * H *1.66 *self.density) / 2) * 9.81 + F2 * math.sin(self.pitch))  # 1.66 is the tool width
-
                          # build data for the learning algorithm
-                         # create(self.soil_type[self.soil], self.force_on_bobcat, self.res_wrench.force.x, self.res_wrench.force.z, self.depth, ((self.depth * H *1.66) /2), self.soil_type)
-            if self.depth <= 0.001:
+                         create(self.soil_type[self.soil], self.force_on_bobcat, self.res_wrench.force.x, self.res_wrench.force.z, self.depth, ((self.depth * H *1.66) /2), self.soil_type)
+            if self.depth <= 0.001 or (self.force_on_bobcat==0 and self.joy_val==0):
                          self.res_wrench.force.x = 0
                          self.res_wrench.force.z = 0
             self.apply_body_wrench(body_name=body_name,
