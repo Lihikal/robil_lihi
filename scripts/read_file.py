@@ -22,7 +22,7 @@ def read_file(file_name):
     return inputs, targets
 
 
-def check_soil(inputs, targets):
+def check_soil(inputs, targets, bobcat_vel, depth, volume):
     n = 3
     m = 2
     h = 4
@@ -34,17 +34,18 @@ def check_soil(inputs, targets):
 
     # inputs, targets = read_file('digits_train.txt')
     p1 = backprop(n, m, h)  # build new backprop
-    p1.train(inputs, targets, iterations, eta)  # train the backprop
-    p1.save(p1, "soil.wgt")
+    # p1.train(inputs, targets, iterations, eta)  # train the backprop
+    # p1.save(p1, "soil.wgt")
 
     p1 = p1.load("soil.wgt")
 
 
-    inputs_test, targets_test = read_file('scores_test.csv')
-    result = p1.test(inputs_test)
+    # inputs_test, targets_test = read_file('scores_test.csv')
+    result = p1.test(np.transpose(np.array([[bobcat_vel], [depth], [volume]], dtype='float')))
     results = result > threshold
-    print(result)
-    # print(p1.test(np.transpose(np.array([[7199.9998390675], [0.3725629354], [0.5786004936]], dtype='float'))))
+    # print(results)
+    return results
+    # print()
 
 def one_hot(a, num_classes):
   return np.squeeze(np.eye(num_classes)[a.reshape(-1)])

@@ -8,7 +8,7 @@ from gazebo_msgs.msg import ContactsState
 from geometry_msgs.msg import Pose, Wrench, Quaternion,Twist
 from sensor_msgs.msg import Imu
 from tf.transformations import euler_from_quaternion, quaternion_from_euler
-from std_msgs.msg import Float64
+from std_msgs.msg import Float64, String, Int32
 import PID
 import numpy as np
 import math
@@ -21,8 +21,8 @@ from sensor_msgs.msg import Joy
 -=soil parameters=-
 type     | K0      |density  | matirial gravity
 ```   ```|`````````|`````````|``````
-dry sand |    20   |  1441   |   1602
-wet sand |    12   |  1922   |   2082
+dry sand |  20/35  |  1441   |   1602
+wet sand |  12/40  |  1922   |   2082
 garbel   |    X    |         |
   3      |    Y    |
   4      |    LB   |
@@ -58,8 +58,12 @@ class Controller:
         topic_states = 'link_states'
 
     soil_type = {"dry_sand": 0, "wet_sand": 1} #, "garbel": 2}
-    soil = "wet_sand"
-    K0 = 12  # penetration resistance of material
+    # soil = "dry_sand"
+    # K0 = 35  # penetration resistance of material
+    # density = 1441  # density of material in kg/m^3
+    # matirial_gravity = 1602  # specific gravity of material g/cm^3
+    soil = "dry_sand"
+    K0 = 40  # penetration resistance of material
     density = 1922  # density of material in kg/m^3
     matirial_gravity = 2082  # specific gravity of material g/cm^3
 
@@ -118,43 +122,47 @@ class Controller:
     def __init__(self):
         rospy.wait_for_service('/gazebo/get_model_state')
         self.get_model_state = rospy.ServiceProxy("/gazebo/get_model_state", GetModelState)
-        rospy.wait_for_service('/gazebo/get_link_state')
         self.get_link_state = rospy.ServiceProxy("/gazebo/get_link_state", GetLinkState)
-        rospy.wait_for_service('/gazebo/apply_body_wrench')
+
         self.apply_body_wrench = rospy.ServiceProxy('/gazebo/apply_body_wrench', ApplyBodyWrench)
         self.pub = rospy.Publisher('/response', Wrench, queue_size=10)
+        self.pub2 = rospy.Publisher('/soil_type', Int32, queue_size=10)
+        self.pub3 = rospy.Publisher('/system_mode', Int32, queue_size=10)
+
         rospy.Subscriber('/robot_bumper', ContactsState, self.get_depth)
-        rospy.Subscriber('/Bobby/imu', Imu, self.get_angular_vel)
-        rospy.Subscriber('/Bobby/controlCMD', BobcatControl, self.get_linear_vel)
         rospy.Subscriber('/joy', Joy, self.get_joy)
-        inputs, targets = read_file("scores.csv")
-        check_soil(inputs, targets)
+        self.pub3.publish(0)
 
         while not rospy.is_shutdown():
-
+            self.pub2.publish(self.soil_type[self.soil])
+            rospy.wait_for_service('/gazebo/get_link_state')
             self.loader_pos = self.get_link_state('Bobby::loader', 'world').link_state.pose
             self.body_pos = self.get_link_state('Bobby::body', 'world').link_state.pose
             z_pile = self.m * (self.loader_pos.position.x + 0.96 + 0.2)  # 0.96 is the distance between center mass of the loader to the end
             H = z_pile - self.z_collision
+            # print("loader pos:", self.loader_pos.position.x)
             # print("z collision:", self.z_collision)
             # print(H)
             # print(self.depth)
-
-
-            if self.depth > 0.001 and self.force_on_bobcat!= 0:
+            if self.depth > 0.001 :#and self.force_on_bobcat!= 0:
                          F2 = self.K0 * math.cos(self.angular_vel) * self.matirial_gravity * H * self.S * 9.81
                          self.res_wrench.force.x = -(F2* math.cos(self.pitch))
                          self.res_wrench.force.z = -(((self.depth * H *1.66 *self.density) / 2) * 9.81 + F2 * math.sin(self.pitch))  # 1.66 is the tool width
                          # build data for the learning algorithm
-                         create(self.soil_type[self.soil], self.force_on_bobcat, self.res_wrench.force.x, self.res_wrench.force.z, self.depth, ((self.depth * H *1.66) /2), self.soil_type)
-            if self.depth <= 0.001 or (self.force_on_bobcat==0 and self.joy_val==0):
+                         # create(self.soil_type[self.soil], self.force_on_bobcat, self.res_wrench.force.x, self.res_wrench.force.z, self.depth, ((self.depth * H *1.66) /2), self.soil_type)
+            if self.depth <= 0.001 :#or (self.force_on_bobcat==0 and self.joy_val==0):
                          self.res_wrench.force.x = 0
                          self.res_wrench.force.z = 0
-            self.apply_body_wrench(body_name=body_name,
+            rospy.wait_for_service('/gazebo/apply_body_wrench')
+            try:
+                self.apply_body_wrench(body_name=body_name,
                                             reference_frame="",
                                             wrench=self.res_wrench,
                                             start_time=rospy.Time.from_sec(0),
                                             duration=rospy.Duration.from_sec(1.0))
+            except Exception as e:
+                print("/gazebo/reset_simulation service call failed")
+
             self.pub.publish(self.res_wrench)
 
             self.rate.sleep()

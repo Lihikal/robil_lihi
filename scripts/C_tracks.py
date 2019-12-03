@@ -10,8 +10,8 @@ pp = pprint.PrettyPrinter(indent=4)
 
 model_name = 'Bobby'
 service_name = '/gazebo/apply_joint_effort'
-RW_joint_name = model_name + '::right_wheel_joint'
-LW_joint_name = model_name + '::left_wheel_joint'
+RW_joint_name = model_name + '::front_right_wheel_joint'
+LW_joint_name = model_name + '::front_left_wheel_joint'
 
 
 node_name = 'tracks_controller'
@@ -62,6 +62,7 @@ class Controller:
         rospy.Subscriber(self.topic_CMD, BobcatControl, self.update_cmd)
 
         while not rospy.is_shutdown():
+            print("in")
             try:
                 self.apply_efforts()
             except Exception as e:
