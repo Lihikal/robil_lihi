@@ -1,10 +1,22 @@
 import random
 import numpy as np
 from collections import defaultdict
+import os
+import json
+import rospkg
+import ast
+import yaml
 
 class QLearn:
     def __init__(self, actions, epsilon, alpha, gamma, env):
-        self.q = defaultdict(int)
+        rospack = rospkg.RosPack()
+        pkg_path = rospack.get_path('robil_lihi')
+        outdir = pkg_path + '/training_results'
+
+        if os.path.isfile(outdir+'/data.npy'):
+            self.q = np.load(outdir+'/data.npy', allow_pickle='TRUE').item()
+        else:
+            self.q = {}
         self.epsilon = epsilon  # exploration constant
         self.alpha = alpha      # discount constant
         self.gamma = gamma      # discount factor
@@ -51,4 +63,4 @@ class QLearn:
     def learn(self, state1, action1, reward, state2):
         maxqnew = max([self.getQ(state2, a) for a in self.actions])
         self.learnQ(state1, action1, reward, reward + self.gamma*maxqnew)
-        # print(self.q)
+        print(self.q)

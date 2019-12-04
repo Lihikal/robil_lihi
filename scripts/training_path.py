@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-import sys
-sys.path.append('/home/robil/catkin_ws/gym')
+
 import gym
 import numpy
 import time
@@ -19,6 +18,8 @@ import random
 from gazebo_msgs.srv import ApplyBodyWrench, GetModelState, GetLinkState, BodyRequest, SetModelState
 from tf.transformations import euler_from_quaternion, quaternion_from_euler
 from nav_msgs.msg import Odometry
+import json
+from os import path
 
 # import our training environment
 import bobcat_env
@@ -37,6 +38,9 @@ def get_depth(data):
 def odom_callback(data):
     global odom
     odom = data
+
+def writefile(fname, s):
+        with open(path.join(outdir, fname), 'w') as fh: fh.write(s)
 
 
 if __name__ == '__main__':
@@ -146,13 +150,13 @@ if __name__ == '__main__':
 
     rospy.loginfo ( ("\n|"+str(nepisodes)+"|"+str(qlearn.alpha)+"|"+str(qlearn.gamma)+"|"+str(initial_epsilon)+"*"+str(epsilon_discount)+"|"+str(highest_reward)+"| PICTURE |"))
 
-    l = last_time_steps.tolist()
-    l.sort()
+    # l = last_time_steps.tolist()
+    # l.sort()
 
+    np.save(outdir+'/data.npy', qlearn.q)
+    # writefile('info.json', json.dumps(str(qlearn.q)))
     #print("Parameters: a="+str)
-    rospy.loginfo("Overall score: {:0.2f}".format(last_time_steps.mean()))
-    rospy.loginfo("Best 100 score: {:0.2f}".format(functools.reduce(lambda x, y: x + y, l[-100:]) / len(l[-100:])))
+    # rospy.loginfo("Overall score: {:0.2f}".format(last_time_steps.mean()))
+    # rospy.loginfo("Best 100 score: {:0.2f}".format(functools.reduce(lambda x, y: x + y, l[-5:]) / len(l[-5:])))
 
     env.close()
-
-
