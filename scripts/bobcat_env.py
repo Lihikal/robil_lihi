@@ -186,8 +186,8 @@ class MovingBobcatEnv(gym.Env):
         BobcatPos_x = observations[0]
         BobcatPos_z = observations[1]
 
-
-        if abs(BobcatPos_x) > 2 and BobcatPos_z>2.5:
+        if self.depth < 0.01 and self.volume_sum > 5:
+        # if abs(BobcatPos_x) > 2 and BobcatPos_z>2.5:
             rospy.logerr("WRONG Cube Pitch Orientation==>" + str(BobcatPos_x))
             done = True
         else:
