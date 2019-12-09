@@ -90,7 +90,7 @@ class Controller:
 
     depth = 0
     angular_vel = 0
-    m = (2.7692)/(0.9538 + 0.2)  # the slope of the pile
+    m = (2.1213)/(1.9213 + 0.2)  # the slope of the pile
     z_collision = 0
     roll = pitch = yaw = 0
 
@@ -130,6 +130,7 @@ class Controller:
         self.pub3 = rospy.Publisher('/system_mode', Int32, queue_size=10)
 
         rospy.Subscriber('/robot_bumper', ContactsState, self.get_depth)
+        rospy.Subscriber('/Bobby/imu', Imu, self.get_angular_vel)
         rospy.Subscriber('/joy', Joy, self.get_joy)
         self.pub3.publish(0)
 
@@ -153,6 +154,7 @@ class Controller:
             if self.depth <= 0.001 :#or (self.force_on_bobcat==0 and self.joy_val==0):
                          self.res_wrench.force.x = 0
                          self.res_wrench.force.z = 0
+
             rospy.wait_for_service('/gazebo/apply_body_wrench')
             try:
                 self.apply_body_wrench(body_name=body_name,

@@ -63,11 +63,14 @@ class MovingBobcatEnv(gym.Env):
         self.hyd = 0
         self.bucket_vel = 0
         self.depth = 0
-        self.m = (2.7692)/(0.9538 + 0.2)  # the slope of the pile
+        self.m = (2.1213)/(1.9213 + 0.2)  # the slope of the pile
         self.density = 1922  # density of material in kg/m^3
         self.z_collision = 0
         self.last_volume = 0
         self.volume_sum = 0
+        self.last_z_pile = 0
+        self.last_x_step = 0
+        self.last_z_collision = 0
 
         # Done
         self.max_pitch_angle = rospy.get_param('/moving_cube/max_pitch_angle')
@@ -80,14 +83,7 @@ class MovingBobcatEnv(gym.Env):
 
         # stablishes connection with simulator
         self.gazebo = GazeboConnection()
-        # self.controllers_list = ['joint_state_controller',
-        #                  'inertia_wheel_roll_joint_velocity_controller'
-
-        # self.controllers_object = ControllersConnection(namespace="moving_cube",
-        #                                                 controllers_list=self.controllers_list)
-
         self.gazebo.unpauseSim()
-        # self.controllers_object.reset_controllers()
         self.check_all_sensors_ready()
 
         rospy.Subscriber('/bobcat/arm/hydraulics', Float64, self.get_hyd)
@@ -101,10 +97,7 @@ class MovingBobcatEnv(gym.Env):
         self.pub = rospy.Publisher('/WPD/Speed', TwistStamped, queue_size=10)
         self.pub2 = rospy.Publisher('/bobcat/arm/hydraulics', Float64, queue_size=10)
         self.pub3 = rospy.Publisher('/bobcat/arm/loader', Float64, queue_size=10)
-        # rospy.wait_for_service('/gazebo/get_link_state')
-        # self.get_link_state = rospy.ServiceProxy("/gazebo/get_link_state", GetLinkState)
-        # self._roll_vel_pub = rospy.Publisher('/moving_cube/inertia_wheel_roll_joint_velocity_controller/command', Float64, queue_size=1)
-        # self.check_publishers_connection()
+
         self.gazebo.pauseSim()
         self.command = TwistStamped()
 
@@ -150,6 +143,10 @@ class MovingBobcatEnv(gym.Env):
         self.set_init_pose()
         self.depth = 0
         self.z_collision = 0
+        self.last_z_pile = 0
+        self.last_x_step = 0
+        self.last_z_collision = 0
+
 
         # self.gazebo.pauseSim()
         # self.gazebo.resetJoint()
@@ -178,6 +175,10 @@ class MovingBobcatEnv(gym.Env):
         self.last_volume = 0.0
         self.total_distance_moved = 0.0
         self.volume_sum = 0
+        self.last_z_pile = 0
+        self.last_x_step = 0
+        self.last_z_collision = 0
+        self.z_collision = 0
         # self.current_y_distance = self.get_y_dir_distance_from_start_point(self.start_point)
         # self.roll_turn_speed = rospy.get_param('/moving_cube/init_roll_vel')
 
@@ -186,12 +187,12 @@ class MovingBobcatEnv(gym.Env):
         BobcatPos_x = observations[0]
         BobcatPos_z = observations[1]
 
-        if self.depth < 0.01 and self.volume_sum > 5:
+        if self.volume_sum > 87 or (self.depth < 0.01 and self.volume_sum > 5):
         # if abs(BobcatPos_x) > 2 and BobcatPos_z>2.5:
-            rospy.logerr("WRONG Cube Pitch Orientation==>" + str(BobcatPos_x))
+            rospy.logerr("Too many soil in the Bucket==>" + str(self.volume_sum))
             done = True
         else:
-            rospy.logdebug("Cube Pitch Orientation Ok==>" + str(BobcatPos_x))
+            # rospy.logdebug("Cube Pitch Orientation Ok==>" + str(BobcatPos_x))
             done = False
 
         return done
@@ -217,21 +218,21 @@ class MovingBobcatEnv(gym.Env):
             self.pub2.publish(r)
             self.pub3.publish(0)
 
-        elif action == 2:  # bucket velocity
-            r = np.random.uniform(-0.1, -0.5)
-            command.twist.linear.x = 0
-            self.pub.publish(command)
-            self.pub2.publish(0)
-            self.pub3.publish(r)
+        # elif action == 2:  # bucket velocity
+        #     r = np.random.uniform(-0.1, -0.5)
+        #     command.twist.linear.x = 0
+        #     self.pub.publish(command)
+        #     self.pub2.publish(0)
+        #     self.pub3.publish(r)
 
-        elif action == 3:  # bucket velocity
+        elif action == 2:  # bucket velocity
             r = np.random.uniform(0.1, 0.5)
             command.twist.linear.x = 0
             self.pub.publish(command)
             self.pub2.publish(0)
             self.pub3.publish(r)
 
-        elif action == 4:  # action arm velocity
+        elif action == 3:  # action arm velocity
             r = round(random.uniform(0.1, 0.5), 3)
             command.twist.linear.x = 0
             self.pub.publish(command)
@@ -498,12 +499,26 @@ class MovingBobcatEnv(gym.Env):
                            self.z_collision = np.mean(data.states[i].contact_positions[0].z)
 
     def calc_volume(self):
-        z_pile = self.m * (self.odom.pose.pose.position.x + 0.96 + 0.2)  # 0.96 is the distance between center mass of the loader to the end
+        roll, pitch, yaw = self.get_orientation_euler()
+        z_pile = self.m * (self.odom.pose.pose.position.x + 0.96 * math.cos(pitch) + 0.2)  # 0.96 is the distance between center mass of the loader to the end
         H = z_pile - self.z_collision
-        volume = ((self.depth * H *1.66 * self.density)/2)  # 1.66 is the tool width
+        print("z_pile:", z_pile)
+        # volume = ((self.depth * H *1.66 * self.density)/2)  # 1.66 is the tool width
         # print("volume", volume)
-        if volume > self.last_volume:
-            self.volume_sum += (volume-self.last_volume)
-        elif volume < self.last_volume:
-            self.volume_sum = self.last_volume
-        self.last_volume = volume
+        # if volume > self.last_volume:
+        #     self.volume_sum += (volume-self.last_volume)
+        # elif volume < self.last_volume:
+        #     self.volume_sum = self.last_volume
+        # self.last_volume = volume
+        x = self.odom.pose.pose.position.x + 0.96 * math.cos(pitch)
+        print("x of the bucket:", x)
+        z = self.z_collision
+        print("z of the bucket:", z)
+        volume = (z_pile + self.last_z_pile - z - self.last_z_collision) * ((x - self.last_x_step)/2) * 1.66 * self.density   # 1.66 is the tool width
+        if z_pile > 0 and z > 0 and z_pile > z:
+            self.volume_sum = self.volume_sum + volume
+        self.last_z_pile = z_pile
+        self.last_x_step = x
+        self.last_z_collision = self.z_collision
+
+
