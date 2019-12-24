@@ -25,6 +25,9 @@ from gazebo_msgs.srv import ApplyBodyWrench, GetModelState, GetLinkState, BodyRe
 from sensor_msgs.msg import Imu
 from tf.transformations import euler_from_quaternion, quaternion_from_euler
 from std_msgs.msg import Float64, String, Int32
+import csv
+import os
+import signal
 
 import gym
 from gym import spaces
@@ -80,6 +83,7 @@ class MovingBobcatEnv(gym.Env):
         self.y_linear_speed_reward_weight = rospy.get_param("/moving_cube/y_linear_speed_reward_weight")
         self.y_axis_angle_reward_weight = rospy.get_param("/moving_cube/y_axis_angle_reward_weight")
         self.end_episode_points = rospy.get_param("/moving_cube/end_episode_points")
+        self.field_division = rospy.get_param("/moving_cube/field_division")
 
         # stablishes connection with simulator
         self.gazebo = GazeboConnection()
@@ -131,8 +135,11 @@ class MovingBobcatEnv(gym.Env):
         self.pub.publish(self.command)
         self.pub2.publish(0)
         self.pub3.publish(0)
+
+        # os.system("rosnode kill response_force")
         self.set_init_pose()
 
+        # os.system("rosrun robil_lihi C_response_loader.py")
         self.gazebo.pauseSim()
         self.gazebo.resetSim()
         self.gazebo.unpauseSim()
@@ -141,17 +148,12 @@ class MovingBobcatEnv(gym.Env):
         self.pub2.publish(0)
         self.pub3.publish(0)
         self.set_init_pose()
-        self.depth = 0
-        self.z_collision = 0
-        self.last_z_pile = 0
-        self.last_x_step = 0
-        self.last_z_collision = 0
-
-
-        # self.gazebo.pauseSim()
-        # self.gazebo.resetJoint()
-        # self.gazebo.unpauseSim()
-        # self.set_init_pose()
+        # self.depth = 0
+        # self.z_collision = 0
+        # self.last_z_pile = 0
+        # self.last_x_step = 0
+        # self.last_z_collision = 0
+        self.init_env_variables()
 
         self.check_all_sensors_ready()
         self.gazebo.pauseSim()
@@ -187,8 +189,8 @@ class MovingBobcatEnv(gym.Env):
         BobcatPos_x = observations[0]
         BobcatPos_z = observations[1]
 
-        if self.volume_sum > 87 or (self.depth < 0.01 and self.volume_sum > 5):
-        # if abs(BobcatPos_x) > 2 and BobcatPos_z>2.5:
+        # if self.volume_sum > 87 or (self.depth < 0.01 and self.volume_sum > 5):
+        if abs(BobcatPos_x) > 8 and BobcatPos_z > 8:
             rospy.logerr("Too many soil in the Bucket==>" + str(self.volume_sum))
             done = True
         else:
@@ -251,16 +253,18 @@ class MovingBobcatEnv(gym.Env):
         roll, pitch, yaw = self.get_orientation_euler()
 
         # We get the position of the bucket
-        BobcatPos_x = math.floor((self.odom.pose.pose.position.x+1.5)/(0.95+1.5)*5)
-        if BobcatPos_x > 5:
-            BobcatPos_x = 5
+        BobcatPos_x = math.floor((self.odom.pose.pose.position.x+1.5)/(0.67+1.5)*self.field_division)
+        # print("x pose:", self.odom.pose.pose.position.x)
+        if BobcatPos_x > self.field_division:
+            BobcatPos_x = float(self.field_division)
         elif BobcatPos_x < 0:
-            BobcatPos_x = 0
-        BobcatPos_z = math.floor((self.odom.pose.pose.position.z-0)/(1-0)*5)
-        if BobcatPos_z > 5:
-            BobcatPos_z = 5
+            BobcatPos_x = 0.0
+        BobcatPos_z = math.floor((self.odom.pose.pose.position.z-0)/(0.8-0)*self.field_division)
+        # print("z pose:", self.odom.pose.pose.position.z)
+        if BobcatPos_z > self.field_division:
+            BobcatPos_z = float(self.field_division)
         elif BobcatPos_z < 0:
-            BobcatPos_z = 0
+            BobcatPos_z = 0.0
 
         # We get the velocity of the bucket
         BobcatVel = math.floor((self.odom.twist.twist.linear.x-0)/(0.5-0)*3)
@@ -319,43 +323,44 @@ class MovingBobcatEnv(gym.Env):
         if not done:
             reward = -1
             self.calc_volume()
-            print("volume sum:", self.volume_sum)
-            if self.volume_sum > 30 and self.depth == 0:
-                reward += 1000
-            elif self.volume_sum > 10:
-                reward += 50
-            # y_distance_now = observations[1]
-            # delta_distance = y_distance_now - self.current_y_distance
-            # rospy.logdebug("y_distance_now=" + str(y_distance_now)+", current_y_distance=" + str(self.current_y_distance))
-            # rospy.logdebug("delta_distance=" + str(delta_distance))
-            # reward_distance = delta_distance * self.move_distance_reward_weight
-            # self.current_y_distance = y_distance_now
-            #
-            # y_linear_speed = observations[4]
-            # rospy.logdebug("y_linear_speed=" + str(y_linear_speed))
-            # reward_y_axis_speed = y_linear_speed * self.y_linear_speed_reward_weight
+            if self.volume_sum == 0:
+                reward -= 50
 
-            # # Negative Reward for yaw different from zero.
-            # yaw_angle = observations[5]
-            # rospy.logdebug("yaw_angle=" + str(yaw_angle))
-            # # Worst yaw is 90 and 270 degrees, best 0 and 180. We use sin function for giving reward.
-            # sin_yaw_angle = math.sin(yaw_angle)
-            # rospy.logdebug("sin_yaw_angle=" + str(sin_yaw_angle))
-            # reward_y_axis_angle = -1 * abs(sin_yaw_angle) * self.y_axis_angle_reward_weight
+            # print("volume sum:", self.volume_sum)
+            # if self.volume_sum > 30 and self.depth <= 0.01:
+            #     reward += 1000
+            if self.volume_sum > 87:  # failed to take the bucket out, too many soil
+                reward -= 1000
+                rospy.logwarn("############### Fail=>" + str(self.volume_sum))
+                with open('success_and_fail.csv', 'a') as csvfile:
+                    writer = csv.writer(csvfile, delimiter=',',
+                                        quotechar='"', quoting=csv.QUOTE_MINIMAL)
+                    writer.writerow(["Fail", self.volume_sum, self.depth, reward])
+                csvfile.close()
+                self._reset()
 
+            if self.volume_sum > 10 and self.depth <= 0.01:  # success! the bucket is out and the volume OK
+                reward += 100 * self.volume_sum
+                rospy.logwarn("############### Success=>" + str(self.volume_sum))
+                with open('success_and_fail.csv', 'a') as csvfile:
+                    writer = csv.writer(csvfile, delimiter=',',
+                                        quotechar='"', quoting=csv.QUOTE_MINIMAL)
+                    writer.writerow(["Success", self.volume_sum, self.depth, reward])
+                csvfile.close()
 
-            # We are not intereseted in decimals of the reward, doesnt give any advatage.
-            # reward = round(reward_distance, 0) + round(reward_y_axis_speed, 0) + round(reward_y_axis_angle, 0)
+            elif 80 < self.volume_sum < 85:  # success! the bucket need to go up
+                reward += 10 * self.volume_sum
+                rospy.logwarn("############### Success=>" + str(self.volume_sum))
+                with open('success_and_fail.csv', 'a') as csvfile:
+                    writer = csv.writer(csvfile, delimiter=',',
+                                        quotechar='"', quoting=csv.QUOTE_MINIMAL)
+                    writer.writerow(["Success - go up", self.volume_sum, self.depth, reward])
+                csvfile.close()
+                # print("its OK")
 
-            # Negative reward for each step
+                self.go_up()
+                self._reset()
 
-            if observations[0] > 0.0:
-                reward = reward + 10 * observations[0]
-
-            # rospy.logdebug("reward_distance=" + str(reward_distance))
-            # rospy.logdebug("reward_y_axis_speed=" + str(reward_y_axis_speed))
-            # rospy.logdebug("reward_y_axis_angle=" + str(reward_y_axis_angle))
-            # rospy.logdebug("reward=" + str(reward))
         else:  # The episode didn't success so we need to give a big negative reward
             reward = -1 * self.end_episode_points
             self.depth = 0
@@ -465,10 +470,39 @@ class MovingBobcatEnv(gym.Env):
             while pitch > 0.0:
                 self.pub3.publish(0.3)
                 roll, pitch, yaw = self.get_orientation_euler()
-            while pitch < -0.1:
+            while pitch < -0.05:
                 self.pub3.publish(-0.3)
                 roll, pitch, yaw = self.get_orientation_euler()
             self.pub3.publish(0)
+            break
+
+    def go_up(self):
+        """get the bucket out of soil
+        """
+        self.gazebo.unpauseSim()  # must in order to get the bucket up
+        self.check_all_sensors_ready()
+
+        self.command.twist.linear.x = 0
+        while not rospy.is_shutdown():
+            self.command.twist.linear.x = 0
+            self.pub.publish(self.command)
+            self.pub2.publish(0)
+            self.pub3.publish(0)
+
+            roll, pitch, yaw = self.get_orientation_euler()
+            print("pitch:", pitch)
+            print("z:", self.odom.pose.pose.position.z)
+            while pitch > -0.45:
+                self.pub3.publish(0.3)
+                roll, pitch, yaw = self.get_orientation_euler()
+            self.pub3.publish(0)
+            while self.odom.pose.pose.position.z < 1.3:
+                self.pub2.publish(0.2)
+            self.pub2.publish(0)
+            print("total volume:", self.volume_sum)
+            self.gazebo.pauseSim()
+            time.sleep(2)
+            self.gazebo.unpauseSim()
             break
 
     def convert_obs_to_state(self, observations):
@@ -502,23 +536,15 @@ class MovingBobcatEnv(gym.Env):
         roll, pitch, yaw = self.get_orientation_euler()
         z_pile = self.m * (self.odom.pose.pose.position.x + 0.96 * math.cos(pitch) + 0.2)  # 0.96 is the distance between center mass of the loader to the end
         H = z_pile - self.z_collision
-        print("z_pile:", z_pile)
-        # volume = ((self.depth * H *1.66 * self.density)/2)  # 1.66 is the tool width
-        # print("volume", volume)
-        # if volume > self.last_volume:
-        #     self.volume_sum += (volume-self.last_volume)
-        # elif volume < self.last_volume:
-        #     self.volume_sum = self.last_volume
-        # self.last_volume = volume
         x = self.odom.pose.pose.position.x + 0.96 * math.cos(pitch)
-        print("x of the bucket:", x)
         z = self.z_collision
-        print("z of the bucket:", z)
         volume = (z_pile + self.last_z_pile - z - self.last_z_collision) * ((x - self.last_x_step)/2) * 1.66 * self.density   # 1.66 is the tool width
         if z_pile > 0 and z > 0 and z_pile > z:
             self.volume_sum = self.volume_sum + volume
+            print("volume", self.volume_sum)
         self.last_z_pile = z_pile
         self.last_x_step = x
         self.last_z_collision = self.z_collision
+
 
 

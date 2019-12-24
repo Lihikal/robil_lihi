@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-
+import sys
+sys.path.append('/home/robil/catkin_ws/gym')
 import gym
 import numpy
 import time
@@ -18,8 +19,6 @@ import random
 from gazebo_msgs.srv import ApplyBodyWrench, GetModelState, GetLinkState, BodyRequest, SetModelState
 from tf.transformations import euler_from_quaternion, quaternion_from_euler
 from nav_msgs.msg import Odometry
-import json
-from os import path
 
 # import our training environment
 import bobcat_env
@@ -132,13 +131,13 @@ if __name__ == '__main__':
             rospy.logwarn("############### state we were=>" + str(state))
             rospy.logwarn("############### action that we took=>" + str(action))
             rospy.logwarn("############### reward that action gave=>" + str(reward))
-            rospy.logwarn("############### State in which we will start nect step=>" + str(nextState))
+            rospy.logwarn("############### State in which we will start next step=>" + str(nextState))
             qlearn.learn(state, action, reward, nextState)
 
             if not(done):
                 state = nextState
             else:
-                rospy.loginfo ("DONE")
+                rospy.loginfo("DONE")
                 last_time_steps = numpy.append(last_time_steps, [int(i + 1)])
                 break
             rospy.loginfo("############### END Step=>" + str(i))
