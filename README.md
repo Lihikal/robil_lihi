@@ -9,6 +9,13 @@ cd ~
 git clone https://github.com/erlerobot/gym-gazebo
 cd gym-gazebo
 sudo pip install -e .
-
 ```
+Run simulation:
+```
+roslaunch robil_lihi bobby.launch
+```
+
+A menu will pop up. To start the training you should click on "Training".
+
+
   
