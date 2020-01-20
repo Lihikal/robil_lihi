@@ -1,4 +1,4 @@
-# robil_lihi GIBUI
+# robil_lihi
 This package is an addition to robil packages.
 
 In order to run it you should download gym:
