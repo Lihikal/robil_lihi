@@ -15,6 +15,6 @@ Run simulation:
 roslaunch robil_lihi bobby.launch
 ```
 
-A menu will pop up. To start the training you should click on "Training".
+A menu will pop up. To start the training you should click on "Find Path".
 The Q table will be saved in folder "training_xxx" when the episod is done.
   
