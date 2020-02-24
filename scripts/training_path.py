@@ -19,10 +19,18 @@ import random
 from gazebo_msgs.srv import ApplyBodyWrench, GetModelState, GetLinkState, BodyRequest, SetModelState
 from tf.transformations import euler_from_quaternion, quaternion_from_euler
 from nav_msgs.msg import Odometry
-
+import matplotlib.pyplot as plt
 # import our training environment
 import bobcat_env
+import csv
 
+def smooth(x):
+    n = len(x)
+    y = np.zeros(n)
+    for i in range(n):
+        start = max(0, i-99)
+        y[i] = float(x[start:(i+1)].sum())/(i-start+1)
+    return y
 
 def get_depth(data):
     global depth
@@ -85,7 +93,6 @@ if __name__ == '__main__':
 
     running_step = rospy.get_param("/moving_cube/running_step")
 
-
     # Initialises the algorithm that we are going to use for learning
     qlearn = qlearn.QLearn(actions=range(env.action_space.n),
                     alpha=Alpha, gamma=Gamma, epsilon=Epsilon, env=env)
@@ -93,6 +100,8 @@ if __name__ == '__main__':
 
     start_time = time.time()
     highest_reward = 0
+    episode_rewards = np.zeros(nepisodes)
+
 
     # Starts the main training loop: the one about the episodes to do
     for x in range(nepisodes):
@@ -128,11 +137,12 @@ if __name__ == '__main__':
             nextState = ''.join(map(str, observation))
 
         # Make the algorithm learn based on the results
-            rospy.logwarn("############### state we were=>" + str(state))
-            rospy.logwarn("############### action that we took=>" + str(action))
-            rospy.logwarn("############### reward that action gave=>" + str(reward))
-            rospy.logwarn("############### State in which we will start next step=>" + str(nextState))
+        #     rospy.logwarn("############### state we were=>" + str(state))
+        #     rospy.logwarn("############### action that we took=>" + str(action))
+        #     rospy.logwarn("############### reward that action gave=>" + str(reward))
+        #     rospy.logwarn("############### State in which we will start next step=>" + str(nextState))
             qlearn.learn(state, action, reward, nextState)
+
 
             if not(done):
                 state = nextState
@@ -145,17 +155,35 @@ if __name__ == '__main__':
         #rospy.sleep(2.0)
         m, s = divmod(int(time.time() - start_time), 60)
         h, m = divmod(m, 60)
-        rospy.logwarn ( ("EP: "+str(x+1)+" - [alpha: "+str(round(qlearn.alpha,2))+" - gamma: "+str(round(qlearn.gamma,2))+" - epsilon: "+str(round(qlearn.epsilon,2))+"] - Reward: "+str(cumulated_reward)+"     Time: %d:%02d:%02d" % (h, m, s)))
+        rospy.logwarn(("EP: "+str(x+1)+" - [alpha: "+str(round(qlearn.alpha, 2))+" - gamma: "+str(round(qlearn.gamma,2))+" - epsilon: "+str(round(qlearn.epsilon,2))+"] - Reward: "+str(cumulated_reward)+"     Time: %d:%02d:%02d" % (h, m, s)))
 
+        with open('success_and_fail.csv', 'a') as csvfile:
+            writer = csv.writer(csvfile, delimiter=',',
+                                quotechar='"', quoting=csv.QUOTE_MINIMAL)
+            writer.writerow(["Finished", cumulated_reward, s])
+        csvfile.close()
+
+        episode_rewards[x] = cumulated_reward
     rospy.loginfo ( ("\n|"+str(nepisodes)+"|"+str(qlearn.alpha)+"|"+str(qlearn.gamma)+"|"+str(initial_epsilon)+"*"+str(epsilon_discount)+"|"+str(highest_reward)+"| PICTURE |"))
 
     # l = last_time_steps.tolist()
     # l.sort()
 
     np.save(outdir+'/data.npy', qlearn.q)
+
     # writefile('info.json', json.dumps(str(qlearn.q)))
     #print("Parameters: a="+str)
     # rospy.loginfo("Overall score: {:0.2f}".format(last_time_steps.mean()))
     # rospy.loginfo("Best 100 score: {:0.2f}".format(functools.reduce(lambda x, y: x + y, l[-5:]) / len(l[-5:])))
 
+    y1 = smooth(episode_rewards)
+    # y2 = smooth(episode_rewards[1,:])
+
+    plt.plot(y1, label='Bobcat RL results')
+    # plt.plot(y2, label='predator')
+
+    plt.xlabel("Episodes")
+    plt.ylabel("Reward")
+    plt.legend()
+    plt.show()
     env.close()
