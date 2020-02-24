@@ -23,6 +23,8 @@ import matplotlib.pyplot as plt
 # import our training environment
 import bobcat_env
 import csv
+import json
+
 
 def smooth(x):
     n = len(x)
@@ -169,9 +171,11 @@ if __name__ == '__main__':
     # l = last_time_steps.tolist()
     # l.sort()
 
-    np.save(outdir+'/data.npy', qlearn.q)
+    np.save(outdir + '/data.npy', qlearn.q)
 
     # writefile('info.json', json.dumps(str(qlearn.q)))
+    with open('data.json', 'w') as f:
+        json.dump(str(qlearn.q), f)
     #print("Parameters: a="+str)
     # rospy.loginfo("Overall score: {:0.2f}".format(last_time_steps.mean()))
     # rospy.loginfo("Best 100 score: {:0.2f}".format(functools.reduce(lambda x, y: x + y, l[-5:]) / len(l[-5:])))
