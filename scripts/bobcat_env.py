@@ -196,20 +196,20 @@ class MovingBobcatEnv(gym.Env):
         # self.pub2.publish(0)
         # self.pub3.publish(0)
 
-    # def _is_done(self, observations):
-    #
-    #     BobcatPos_x = observations[0]
-    #     BobcatPos_z = observations[1]
-    #
-    #     # if self.volume_sum > 87 or (self.depth < 0.01 and self.volume_sum > 5):
-    #     if abs(BobcatPos_x) > 8 and BobcatPos_z > 8:
-    #         rospy.logerr("Too many soil in the Bucket==>" + str(self.volume_sum))
-    #         done = True
-    #     else:
-    #         # rospy.logdebug("Cube Pitch Orientation Ok==>" + str(BobcatPos_x))
-    #         done = False
-    #
-    #     return done
+    def _is_done(self, observations):
+
+        BobcatPos_x = observations[0]
+        BobcatPos_z = observations[1]
+
+        # if self.volume_sum > 87 or (self.depth < 0.01 and self.volume_sum > 5):
+        if abs(BobcatPos_x) > 8 and BobcatPos_z > 8:
+            rospy.logerr("Too many soil in the Bucket==>" + str(self.volume_sum))
+            done = True
+        else:
+            # rospy.logdebug("Cube Pitch Orientation Ok==>" + str(BobcatPos_x))
+            done = False
+
+        return done
 
     def set_action(self, action):
         command = TwistStamped()
@@ -336,45 +336,21 @@ class MovingBobcatEnv(gym.Env):
             reward = -1
             # reward = reward * self.odom.pose.pose.position.z
             self.calc_volume()
-            if self.volume_sum == 0:
-                reward -= 10
 
-            # print("volume sum:", self.volume_sum)
-            # if self.volume_sum > 30 and self.depth <= 0.01:
-            #     reward += 1000
+
             if self.volume_sum > 87:  # failed to take the bucket out, too many soil
                 reward -= 1000
                 rospy.logwarn("############### Fail=>" + str(self.volume_sum))
-                # with open('success_and_fail.csv', 'a') as csvfile:
-                #     writer = csv.writer(csvfile, delimiter=',',
-                #                         quotechar='"', quoting=csv.QUOTE_MINIMAL)
-                #     writer.writerow(["Fail", self.volume_sum, self.depth, reward])
-                # csvfile.close()
+
                 self._reset()
                 rospy.loginfo("reset because of Fail")
-            if self.volume_sum == 0:
-                reward = reward + (1/self.odom.pose.pose.position.z)
 
-            # if self.volume_sum > 10 and self.depth <= 0.01:  # success! the bucket is out and the volume OK
-            #     reward += 100 * self.volume_sum
-            #     rospy.logwarn("############### Success=>" + str(self.volume_sum))
-            #     # with open('success_and_fail.csv', 'a') as csvfile:
-            #     #     writer = csv.writer(csvfile, delimiter=',',
-            #     #                         quotechar='"', quoting=csv.QUOTE_MINIMAL)
-            #     #     writer.writerow(["Success", self.volume_sum, self.depth, reward])
-            #     # csvfile.close()
+            if self.volume_sum == 0:
+                reward = reward - 10 * self.odom.pose.pose.position.z
 
             elif 80 < self.volume_sum < 85:  # success! the bucket need to go up
-                reward += 10 * self.volume_sum
+                reward += 100 * self.volume_sum
                 rospy.logwarn("############### Success=>" + str(self.volume_sum))
-                # with open('success_and_fail.csv', 'a') as csvfile:
-                #     writer = csv.writer(csvfile, delimiter=',',
-                #                         quotechar='"', quoting=csv.QUOTE_MINIMAL)
-                #     writer.writerow(["Success - go up", self.volume_sum, self.depth, reward])
-                # csvfile.close()
-                # print("its OK")
-
-                # self.go_up()
                 self._reset()
                 rospy.loginfo("reset because os Success")
 
@@ -382,7 +358,6 @@ class MovingBobcatEnv(gym.Env):
 
             reward = -1000
             self.depth = 0
-            rospy.loginfo("didn't success (all episode)")
 
 
         return reward
