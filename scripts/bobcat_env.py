@@ -345,11 +345,14 @@ class MovingBobcatEnv(gym.Env):
                 self._reset()
                 rospy.loginfo("reset because of Fail")
 
-            if self.volume_sum == 0:
+            if self.volume_sum > 0.1:
+                reward += self.volume_sum
+
+            elif self.volume_sum == 0:
                 reward = reward - 10 * self.odom.pose.pose.position.z
 
-            elif 80 < self.volume_sum < 85:  # success! the bucket need to go up
-                reward += 100 * self.volume_sum
+            if 80 < self.volume_sum < 85:  # success! the bucket need to go up
+                reward += 2 * self.volume_sum
                 rospy.logwarn("############### Success=>" + str(self.volume_sum))
                 self._reset()
                 rospy.loginfo("reset because os Success")
