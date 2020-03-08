@@ -4,18 +4,18 @@ moving_cube: #namespace
     pos_step: 0.016     # increment in position for each command
     
     #qlearn parameters
-    alpha: 0.1
+    alpha: 0.7
     gamma: 0.7
     epsilon: 0.9
     epsilon_discount: 0.999
-    nepisodes: 10
-    nsteps: 2500
+    nepisodes: 500
+    nsteps: 2000
     number_splits: 10 #set to change the number of state splits for the continuous problem and also the number of env_variable splits
  
     running_step: 0.06 # Time for each step
     wait_time: 0.1 # Time to wait in the reset phases
  
-    n_actions: 5 # We have 5 actions
+    n_actions: 4 # We have 4 actions
  
     speed_step: 1.0 # Time to wait in the reset phases
  
