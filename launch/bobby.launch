@@ -35,7 +35,7 @@
         </physics>
         <arg name="use_sim_time" value="true"/>
         <!--<param name="robot_name" value="$(arg robot_name"/>   &lt;!&ndash;No Use...&ndash;&gt;-->
-        <arg name="gui" value="false"/>   <!-- false for no gazebo view -->
+        <arg name="gui" value="true"/>   <!-- false for no gazebo view -->
         <arg name="recording" value="false"/>
         <arg name="debug" value="false"/>
     </include>
