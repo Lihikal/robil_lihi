@@ -46,19 +46,20 @@
         <include>
             <uri>model://bobcat_tracked</uri>
             <name>Bobby</name>
-            <pose>-2.0 0 0.09 0 0 0</pose>
+            <pose>-1.8 0 0.09 0 0 0</pose>
         </include>
-        <model name="box">
-      <static>true</static>
+      <model name="box">
+        <static>true</static>
 
-      <pose>1.567766953 0 0.353553 0 0.7853981 0</pose>
-      <link name="link">
-        <collision name="collision">
-          <geometry>
-            <box>
-              <size>2 4 3</size>
-            </box>
+        <pose>1.567766953 0 0.353553 0 0.7853981 0</pose>
+        <link name="link">
+            <collision name="collision">
+            <geometry>
+                <box>
+                    <size>2 4 3</size>
+                </box>
           </geometry>
+
           <surface>
             <contact>
               <collide_without_contact>true</collide_without_contact>
@@ -74,11 +75,26 @@
           </surface>
         </collision>
         <visual name="visual">
+
           <geometry>
             <box>
               <size>2 4 3</size>
             </box>
           </geometry>
+          <material>
+            <script>
+              <uri>model://smooth_ground/materials/scripts</uri>
+              <uri>model://smooth_ground/materials/textures</uri>
+              <name>Smooth_ground/Diffuse</name>
+            </script>
+            <shader type='pixel'>
+              <normal_map>__default__</normal_map>
+            </shader>
+            <ambient>1 1 1 1</ambient>
+            <diffuse>1 1 1 1</diffuse>
+            <specular>0 0 0 1</specular>
+            <emissive>0 0 0 1</emissive>
+          </material>
           <transparency>0.5</transparency>
           <cast_shadows>1</cast_shadows>
         </visual>
@@ -87,4 +103,3 @@
 
     </world>
 </sdf>
-
