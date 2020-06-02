@@ -27,7 +27,6 @@ garbel   |    X    |         |
   3      |    Y    |
   4      |    LB   |
   5      |    RB   |
-
 `````````````````````````````````````````````
 """
 pp = pprint.PrettyPrinter(indent=4)

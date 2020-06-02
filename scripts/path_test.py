@@ -3,29 +3,15 @@ import numpy as np
 from collections import defaultdict
 import os
 import json
-import rospkg
 import ast
 import yaml
+import pickle
 
-class QLearn:
-    def __init__(self, actions, epsilon, alpha, gamma, env):
-        rospack = rospkg.RosPack()
-        pkg_path = rospack.get_path('robil_lihi')
-        outdir = pkg_path + '/training_results'
 
-        if os.path.isfile(outdir+'/data.npy'):
-            self.q = np.load(outdir+'/data.npy', allow_pickle='TRUE').item()
-        else:
-            self.q = {}
-        self.epsilon = epsilon  # exploration constant
-        self.alpha = alpha      # discount constant
-        self.gamma = gamma      # discount factor
-        self.actions = actions
-
-    def getQ(self, state, action):
+def getQ(self, state, action):
         return self.q.get((state, action), 0.0)
 
-    def learnQ(self, state, action, reward, value):
+def learnQ(self, state, action, reward, value):
         '''
         Q-learning:
             Q(s, a) += alpha * (reward(s,a) + max(Q(s') - Q(s,a))
@@ -36,7 +22,7 @@ class QLearn:
         else:
             self.q[(state, action)] = oldv + self.alpha * (value - oldv)
 
-    def chooseAction(self, state, return_q=False):
+def chooseAction(self, state, return_q=False):
         q = [self.getQ(state, a) for a in self.actions]
         maxQ = max(q)
 
@@ -60,7 +46,29 @@ class QLearn:
             return action, q
         return action
 
-    def learn(self, state1, action1, reward, state2):
+def learn(self, state1, action1, reward, state2):
         maxqnew = max([self.getQ(state2, a) for a in self.actions])
         self.learnQ(state1, action1, reward, reward + self.gamma*maxqnew)
         # print(self.q)
+
+if __name__ == '__main__':
+
+    SIZE = 10
+    outdir = '/home/robil/catkin_ws/src/robil_lihi/training_results'
+
+    if os.path.isfile(outdir + '/data.pickle'):
+            q = np.load(outdir + '/data.npy', allow_pickle='TRUE').item()
+
+
+    else:
+        q = {}
+        for i in range(-SIZE + 1, SIZE):
+            for ii in range(-SIZE + 1, SIZE):
+                for iii in range(-SIZE + 1, SIZE):
+                    for iiii in range(-SIZE + 1, SIZE):
+                        q[((i, ii), (iii, iiii))] = [np.random.uniform(-5, 0) for i in range(4)]
+
+    with open(outdir + "qtable-{int(time.time())}.pickle", "wb") as f:
+        pickle.dump(q, f)
+
+    print (q)

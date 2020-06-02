@@ -32,15 +32,15 @@ import signal
 import gym
 from gym import spaces
 import random
+import shlex
+from psutil import Popen
 
-class CustomEnv(gym.Env):
-  """Custom Environment that follows gym interface"""
-  metadata = {'render.modes': ['human']}
 
 reg = register(
     id='MovingBobcat-v0',
     entry_point='bobcat_env:MovingBobcatEnv',
-    timestep_limit=1000,
+    # timestep_limit=10,
+    # max_episode_steps=2000
     )
 
 class MovingBobcatEnv(gym.Env):
@@ -48,7 +48,9 @@ class MovingBobcatEnv(gym.Env):
     def __init__(self):
 
         self.number_actions = rospy.get_param('/moving_cube/n_actions')
+        self.field_division = rospy.get_param("/moving_cube/field_division")
         self.action_space = spaces.Discrete(self.number_actions)
+        self.observation_space = spaces.Discrete((self.field_division+1)*(self.field_division+1)*3*3*4)
 
         self._seed()
 
@@ -76,6 +78,10 @@ class MovingBobcatEnv(gym.Env):
         self.last_z_collision = 0
         self.tip_position = Point()
         self.last_reward = 0
+        # self.min_x = -1.4
+        # self.min_z = 1
+        # self.max_x = -1
+        # self.max_z = 0
 
         # Done
         self.max_pitch_angle = rospy.get_param('/moving_cube/max_pitch_angle')
@@ -85,7 +91,6 @@ class MovingBobcatEnv(gym.Env):
         self.y_linear_speed_reward_weight = rospy.get_param("/moving_cube/y_linear_speed_reward_weight")
         self.y_axis_angle_reward_weight = rospy.get_param("/moving_cube/y_axis_angle_reward_weight")
         self.end_episode_points = rospy.get_param("/moving_cube/end_episode_points")
-        self.field_division = rospy.get_param("/moving_cube/field_division")
 
         # stablishes connection with simulator
         self.gazebo = GazeboConnection()
@@ -106,16 +111,17 @@ class MovingBobcatEnv(gym.Env):
         self.pub2 = rospy.Publisher('/bobcat/arm/hydraulics', Float64, queue_size=10)
         self.pub3 = rospy.Publisher('/bobcat/arm/loader', Float64, queue_size=10)
 
-
         self.gazebo.pauseSim()
         self.command = TwistStamped()
+        self.node_process = Popen(shlex.split('rosrun robil_lihi C_response_loader.py'))
+        self.node_process.terminate()
+
 
     def _seed(self, seed=None): #overriden function
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
     def _step(self, action):#overriden function
-
         self.gazebo.unpauseSim()
         self.set_action(action)
         self.gazebo.pauseSim()
@@ -128,11 +134,8 @@ class MovingBobcatEnv(gym.Env):
         return simplified_obs, reward, done, info
 
     def _reset(self):
-
         self.gazebo.unpauseSim()
-        # self.gazebo.pauseSim()
-        # self.gazebo.clearBodyWrenches()
-        # self.gazebo.unpauseSim()
+
         self.check_all_sensors_ready()
         self.z_collision = 0
         self.depth = 0
@@ -140,13 +143,15 @@ class MovingBobcatEnv(gym.Env):
         self.pub.publish(self.command)
         self.pub2.publish(0)
         self.pub3.publish(0)
+        self.node_process.terminate()
 
-        # os.system("rosnode kill response_force")
+        # os.system("rosnode kill /Bobby/response_force")
         self.set_init_pose()
 
         # os.system("rosrun robil_lihi C_response_loader.py")
         self.gazebo.pauseSim()
         self.gazebo.resetSim()
+        self.node_process = Popen(shlex.split('rosrun robil_lihi C_response_loader.py'))
         self.gazebo.unpauseSim()
         self.command.twist.linear.x = 0
         self.pub.publish(self.command)
@@ -198,15 +203,13 @@ class MovingBobcatEnv(gym.Env):
 
     def _is_done(self, observations):
 
-        BobcatPos_x = observations[0]
-        BobcatPos_z = observations[1]
-
         # if self.volume_sum > 87 or (self.depth < 0.01 and self.volume_sum > 5):
-        if abs(BobcatPos_x) > 8 and BobcatPos_z > 8:
-            rospy.logerr("Too many soil in the Bucket==>" + str(self.volume_sum))
+        now = rospy.get_rostime()
+        if 80 < self.volume_sum or now.secs > 40:  # term to restart the episode
+            # rospy.logerr("Good amount of soil==>" + str(self.volume_sum))
+            # rospy.logerr("Current time %i %i", now.secs, now.nsecs)
             done = True
         else:
-            # rospy.logdebug("Cube Pitch Orientation Ok==>" + str(BobcatPos_x))
             done = False
 
         return done
@@ -264,14 +267,25 @@ class MovingBobcatEnv(gym.Env):
         # We get the orientation of the bucket in RPY
         roll, pitch, yaw = self.get_orientation_euler()
 
+        # # check the field dimentions
+        # if self.odom.pose.pose.position.x<self.min_x:
+        #     self.min_x = self.odom.pose.pose.position.x
+        # if self.odom.pose.pose.position.x>self.max_x:
+        #     self.max_x = self.odom.pose.pose.position.x
+        # if self.odom.pose.pose.position.z < self.min_z:
+        #         self.min_z = self.odom.pose.pose.position.z
+        # if self.odom.pose.pose.position.z > self.max_z:
+        #         self.max_z = self.odom.pose.pose.position.z
+        # print("x position min:", self.min_x, "max:",self.max_x)
+        # print("z position min:", self.min_z, "max:",self.max_z)
+
         # We get the position of the bucket
-        BobcatPos_x = math.floor((self.odom.pose.pose.position.x+1.5)/(0.67+1.5)*self.field_division)
-        # print("x pose:", self.odom.pose.pose.position.x)
+        BobcatPos_x = math.floor((self.odom.pose.pose.position.x+1.495)/(-0.1311+1.495)*self.field_division)
         if BobcatPos_x > self.field_division:
             BobcatPos_x = float(self.field_division)
         elif BobcatPos_x < 0:
             BobcatPos_x = 0.0
-        BobcatPos_z = math.floor((self.odom.pose.pose.position.z-0)/(0.8-0)*self.field_division)
+        BobcatPos_z = math.floor((self.odom.pose.pose.position.z-0.0924)/(0.4037-0.0924)*self.field_division)
         # print("z pose:", self.odom.pose.pose.position.z)
         if BobcatPos_z > self.field_division:
             BobcatPos_z = float(self.field_division)
@@ -279,17 +293,17 @@ class MovingBobcatEnv(gym.Env):
             BobcatPos_z = 0.0
 
         # We get the velocity of the bucket
-        BobcatVel = math.floor((self.odom.twist.twist.linear.x-0)/(0.5-0)*3)
+        BobcatVel = math.floor((self.odom.twist.twist.linear.x-0)/(0.5-0)*9)
         if BobcatVel > 3:
             BobcatVel = 3
         if BobcatVel < 0:
             BobcatVel = 0
-        ArmVel = math.floor((float(self.hyd))/(0.5-0.0)*2)
+        ArmVel = math.floor((float(self.hyd))/(0.5-0.0)*8)
         if ArmVel > 2:
             ArmVel = 2
         if ArmVel < 0:
             ArmVel = 0
-        BucketVel = math.floor((float(self.bucket_vel))/(0.5-0.0)*2)
+        BucketVel = math.floor((float(self.bucket_vel))/(0.5-0.0)*8)
         if BucketVel > 2:
             BucketVel = 2
         if BucketVel < 0:
@@ -339,27 +353,27 @@ class MovingBobcatEnv(gym.Env):
 
 
             if self.volume_sum > 87:  # failed to take the bucket out, too many soil
-                reward -= 1000
+                reward -= self.volume_sum
                 rospy.logwarn("############### Fail=>" + str(self.volume_sum))
 
-                self._reset()
-                rospy.loginfo("reset because of Fail")
+                # self._reset()
+                # rospy.loginfo("reset because of Fail")
 
-            if self.volume_sum > 0.1:
-                reward += self.volume_sum
+            elif self.volume_sum > 0.1:
+                reward += 0.5 * self.volume_sum
 
-            elif self.volume_sum == 0:
+            if self.volume_sum == 0:
                 reward = reward - 10 * self.odom.pose.pose.position.z
 
-            if 80 < self.volume_sum < 85:  # success! the bucket need to go up
-                reward += 2 * self.volume_sum
-                rospy.logwarn("############### Success=>" + str(self.volume_sum))
-                self._reset()
-                rospy.loginfo("reset because os Success")
-
+            # if 80 < self.volume_sum < 86:  # success! the bucket need to go up
+            #     reward += 2 * self.volume_sum
+            #     rospy.logwarn("############### Success=>" + str(self.volume_sum))
+            #     # self._reset()
+            #     # rospy.loginfo("reset because os Success")
+            # print("reward gave:", reward)
         else:  # The episode didn't success so we need to give a big negative reward
 
-            reward = -1000
+            reward = 0
             self.depth = 0
 
 
@@ -543,7 +557,7 @@ class MovingBobcatEnv(gym.Env):
         volume = (z_pile + self.last_z_pile - z - self.last_z_collision) * ((x - self.last_x_step)/2) * 1.66 * self.density   # 1.66 is the tool width
         if z_pile > 0 and z > 0 and z_pile > z:
             self.volume_sum = self.volume_sum + volume
-            print("volume", self.volume_sum)
+            # print("volume", self.volume_sum)
         self.last_z_pile = z_pile
         self.last_x_step = x
         self.last_z_collision = self.z_collision

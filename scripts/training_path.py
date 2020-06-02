@@ -24,7 +24,8 @@ import matplotlib.pyplot as plt
 import bobcat_env
 import csv
 import json
-
+import os
+import pickle
 
 def smooth(x):
     n = len(x)
@@ -48,8 +49,6 @@ def odom_callback(data):
     global odom
     odom = data
 
-def writefile(fname, s):
-        with open(path.join(outdir, fname), 'w') as fh: fh.write(s)
 
 
 if __name__ == '__main__':
@@ -141,7 +140,7 @@ if __name__ == '__main__':
         # Make the algorithm learn based on the results
         #     rospy.logwarn("############### state we were=>" + str(state))
         #     rospy.logwarn("############### action that we took=>" + str(action))
-        #     rospy.logwarn("############### reward that action gave=>" + str(reward))
+            rospy.logwarn("############### reward that action gave=>" + str(reward))
         #     rospy.logwarn("############### State in which we will start next step=>" + str(nextState))
             qlearn.learn(state, action, reward, nextState)
 
@@ -166,6 +165,7 @@ if __name__ == '__main__':
         csvfile.close()
 
         episode_rewards[x] = cumulated_reward
+
     rospy.loginfo ( ("\n|"+str(nepisodes)+"|"+str(qlearn.alpha)+"|"+str(qlearn.gamma)+"|"+str(initial_epsilon)+"*"+str(epsilon_discount)+"|"+str(highest_reward)+"| PICTURE |"))
 
     # l = last_time_steps.tolist()
@@ -176,9 +176,9 @@ if __name__ == '__main__':
     # writefile('info.json', json.dumps(str(qlearn.q)))
     with open('data.json', 'w') as f:
         json.dump(str(qlearn.q), f)
-    #print("Parameters: a="+str)
-    # rospy.loginfo("Overall score: {:0.2f}".format(last_time_steps.mean()))
-    # rospy.loginfo("Best 100 score: {:0.2f}".format(functools.reduce(lambda x, y: x + y, l[-5:]) / len(l[-5:])))
+
+    with open(outdir + "qtable-{int(time.time())}.pickle", "wb") as f:
+        pickle.dump(qlearn.q, f)
 
     y1 = smooth(episode_rewards)
     # y2 = smooth(episode_rewards[1,:])

@@ -75,10 +75,10 @@ class Controller:
 
         while not rospy.is_shutdown():
             if self.mode == 1:
-                os.system('rosrun robil_lihi check_soil.py')
+                os.system('rosrun robil_lihi bobcat_a2c.py -n trpo_bobcat -e MovingBobcat-v0')
             self.rate.sleep()
             if self.mode == 2:
-                os.system('rosrun robil_lihi training_path.py')
+                os.system('rosrun robil_lihi train.py')
             self.rate.sleep()
 
 if __name__ == '__main__':
