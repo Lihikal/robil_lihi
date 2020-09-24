@@ -11,6 +11,7 @@ cd gym-gazebo
 sudo pip install -e .
 ```
 In addition, you need to install tensorflow
+
 Run simulation:
 ```
 roslaunch robil_lihi bobby.launch
