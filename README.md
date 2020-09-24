@@ -10,7 +10,7 @@ git clone https://github.com/erlerobot/gym-gazebo
 cd gym-gazebo
 sudo pip install -e .
 ```
-In addition, you need to install tensorflow
+In addition, you need to install pytorch
 
 Run simulation:
 ```
