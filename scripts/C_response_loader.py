@@ -9,12 +9,8 @@ from geometry_msgs.msg import Pose, Wrench, Quaternion,Twist
 from sensor_msgs.msg import Imu
 from tf.transformations import euler_from_quaternion, quaternion_from_euler
 from std_msgs.msg import Float64, String, Int32
-import PID
 import numpy as np
 import math
-from create_file import create
-from read_file import read_file, check_soil
-from robil_lihi.msg import BobcatControl
 from sensor_msgs.msg import Joy
 
 """
@@ -57,11 +53,8 @@ class Controller:
         topic_states = 'link_states'
 
     soil_type = {"dry_sand": 0, "wet_sand": 1} #, "garbel": 2}
-    # soil = "dry_sand"
-    # K0 = 35  # penetration resistance of material
-    # density = 1441  # density of material in kg/m^3
-    # matirial_gravity = 1602  # specific gravity of material g/cm^3
-    soil = "dry_sand"
+
+    soil = "wet_sand"
     K0 = 40  # penetration resistance of material
     density = 1922  # density of material in kg/m^3
     matirial_gravity = 2082  # specific gravity of material g/cm^3
@@ -86,6 +79,13 @@ class Controller:
     orientation_q = Quaternion()
     force_on_bobcat = 0
     joy_val = 0
+    x=0
+    z_collision = 0
+    volume = 0
+    volume_sum=0
+    last_z_pile = 0
+    last_x_step = 0
+    last_z_collision = 0
 
     depth = 0
     angular_vel = 0
@@ -101,7 +101,6 @@ class Controller:
                  if ('box' in data.states[i].collision2_name) or ('box' in data.states[i].collision1_name):  # check that the string exist in collision2_name/1
                            self.depth = np.mean(data.states[i].depths)
                            self.z_collision = np.mean(data.states[i].contact_positions[0].z)
-                           # rospy.loginfo(self.depth)
 
     def get_angular_vel(self, msg):
         self.angular_vel = msg.angular_velocity.y
@@ -138,19 +137,26 @@ class Controller:
             rospy.wait_for_service('/gazebo/get_link_state')
             self.loader_pos = self.get_link_state('Bobby::loader', 'world').link_state.pose
             self.body_pos = self.get_link_state('Bobby::body', 'world').link_state.pose
-            z_pile = self.m * (self.loader_pos.position.x + 0.96 + 0.2)  # 0.96 is the distance between center mass of the loader to the end
+            z_pile = self.m * (self.loader_pos.position.x + 0.96 * math.cos(self.pitch) + 0.2)  # 0.96 is the distance between center mass of the loader to the end
             H = z_pile - self.z_collision
-            # print("loader pos:", self.loader_pos.position.x)
-            # print("z collision:", self.z_collision)
-            # print(H)
-            # print(self.depth)
-            if self.depth > 0.001 :#and self.force_on_bobcat!= 0:
+
+            if self.depth > 0.001 :
+                         z_pile = self.m * (self.loader_pos.position.x + 0.96 * math.cos(
+                            self.pitch) + 0.2)  # 0.96 is the distance between center mass of the loader to the end
+                         x = self.loader_pos.position.x + 0.96 * math.cos(self.pitch)
+                         big_trapezoid = (x - self.last_x_step) * (z_pile + self.last_z_pile) / 2
+                         small_trapezoid = (x - self.last_x_step) * (self.z_collision + self.last_z_collision) / 2
+                         volume = (big_trapezoid - small_trapezoid) * 1.66 * self.density  # 1.66 is the tool width
+                         if z_pile > 0 and self.z_collision > 0 and z_pile > self.z_collision:
+                             self.volume_sum = self.volume_sum + volume
+                         self.last_z_pile = z_pile
+                         self.last_x_step = x
+                         self.last_z_collision = self.z_collision
                          F2 = self.K0 * math.cos(self.angular_vel) * self.matirial_gravity * H * self.S * 9.81
-                         self.res_wrench.force.x = -(F2* math.cos(self.pitch))
-                         self.res_wrench.force.z = -(((self.depth * H *1.66 *self.density) / 2) * 9.81 + F2 * math.sin(self.pitch))  # 1.66 is the tool width
+                         self.res_wrench.force.x = -(F2 * math.cos(self.pitch))
+                         self.res_wrench.force.z = -(volume * 9.81 + F2 * math.sin(self.pitch))
                          # build data for the learning algorithm
-                         # create(self.soil_type[self.soil], self.force_on_bobcat, self.res_wrench.force.x, self.res_wrench.force.z, self.depth, ((self.depth * H *1.66) /2), self.soil_type)
-            if self.depth <= 0.001 :#or (self.force_on_bobcat==0 and self.joy_val==0):
+            if self.depth <= 0.001:
                          self.res_wrench.force.x = 0
                          self.res_wrench.force.z = 0
 
