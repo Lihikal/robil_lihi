@@ -2,10 +2,8 @@
 
 import rospy
 from std_srvs.srv import Empty
-from gazebo_msgs.msg import ODEPhysics
 from gazebo_msgs.srv import SetPhysicsProperties, SetPhysicsPropertiesRequest
 from gazebo_msgs.srv import ApplyBodyWrench, GetModelState, GetLinkState, BodyRequest, SetModelState, JointRequest
-from gazebo_msgs.msg import ContactsState, ModelState
 from std_msgs.msg import Float64
 from geometry_msgs.msg import Vector3
 
@@ -20,9 +18,6 @@ class GazeboConnection():
         self.pause = rospy.ServiceProxy("/gazebo/pause_physics", Empty)
         self.unpause = rospy.ServiceProxy("/gazebo/unpause_physics", Empty)
 
-        # self.unpause = rospy.ServiceProxy('/gazebo/unpause_physics', Empty)
-        # self.pause = rospy.ServiceProxy('/gazebo/pause_physics', Empty)
-        # self.reset_proxy = rospy.ServiceProxy('/gazebo/reset_simulation', Empty)
 
         # Setup the Gravity Controle system
         service_name = '/gazebo/set_physics_properties'
@@ -31,9 +26,6 @@ class GazeboConnection():
         rospy.logdebug("Service Found " + str(service_name))
 
         self.set_physics = rospy.ServiceProxy(service_name, SetPhysicsProperties)
-        # self.init_values()
-        # We always pause the simulation, important for legged robots learning
-        # self.pauseSim()
 
     def clearBodyWrenches(self):
         rospy.wait_for_service('/gazebo/clear_body_wrenches')
@@ -94,18 +86,6 @@ class GazeboConnection():
         self._gravity.x = 0.0
         self._gravity.y = 0.0
         self._gravity.z = -9.81
-
-        # self._ode_config = ODEPhysics()
-        # self._ode_config.auto_disable_bodies = False
-        # self._ode_config.sor_pgs_precon_iters = 0
-        # self._ode_config.sor_pgs_iters = 50
-        # self._ode_config.sor_pgs_w = 1.3
-        # self._ode_config.sor_pgs_rms_error_tol = 0.0
-        # self._ode_config.contact_surface_layer = 0.001
-        # self._ode_config.contact_max_correcting_vel = 0.0
-        # self._ode_config.cfm = 0.0
-        # self._ode_config.erp = 0.2
-        # self._ode_config.max_contacts = 20
 
         self.update_gravity_call()
 
