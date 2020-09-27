@@ -21,7 +21,7 @@ A menu will pop up. To start the training you should click on "Find Path - DQN".
 The Bobcat simulation start to train the robot using Deep Reinforcement Learning algorithm.
 A single state is composed of 5 elements of the bucket: X position, Z position, robot x velocity, arm velocity and bucket velocity.
 
-![Bobcat](/Pictures/bobcat_and_pile.png)
+![Bobcat](https://github.com/Lihikal/robil_lihi_GIBUI/blob/master/Pictures/bobcat_and_pile.png)
 
 We divided the screen into a 6x6 grid according to the bucket position. The bucket and arm velocity divided to 3 options and the
 bobcat velocity to 4. 
