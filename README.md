@@ -31,7 +31,7 @@ The actions are engine commands: 1. Bobcat velocity (X axis direction)
                                  4. Arm lifting and bobcat velocity combined.
                                  
 **Run PPO training**                                 
-To get started, I recommend cloning this fork of the code repository from the excellent Deep Reinforcement Learning Hands-On, Second Edition book.
+To get started, I recommend cloning "Chapter 19"  of the code repository from the [Deep Reinforcement Learning Hands-On Second Edition!] (https://www.zbukarf1.ga/book.php?id=xKdhDwAAQBAJ,) book.
 ```                             
 rosrun robil_lihi train_ppo.py -n ppo -e MovingBobcat-v0 --cuda
 ```  
