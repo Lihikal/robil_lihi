@@ -1,0 +1,71 @@
+<!-- -*- mode: XML -*- -->
+<launch>
+    <arg name="rqt" default="true"/>
+    <!--<arg name="rqt" default="false"/>-->
+
+    <arg name="robot_name" default="Bobby"/>
+
+    <!--<arg name="controllers" default="false"/-->
+    <arg name="controllers" default="true"/>
+    <arg name="forces" default="true"/>
+    <arg name="framework" default="true"/>
+
+    <arg name="autorespawn" default="true"/>
+    <arg name="robot_models" default="$(find robil_lihi)/sdf_models"/>
+    <arg name="world_models" default="$(find gazebo_objects)/models"/>
+
+  
+    <!-- setting gazebo path for platform and sensors models -->
+    <env name="GAZEBO_MODEL_PATH" value="$(arg robot_models):$(arg world_models)" />
+    <arg name="world_name" default="bobcat_and_pile.world"/>
+    <param name = "direction" type = "int" value = "1" />
+    <rosparam command="load" file="$(find robil_lihi)/config/bobcat_training_param.yaml" />
+
+    <!-- We resume the logic in empty_world.launch, changing only the name of the world to be launched -->
+    <include file="$(find gazebo_ros)/launch/empty_world.launch">
+        <arg name="world_name" value="$(find robil_lihi)/worlds/bobcat_and_pile.world"/>
+        <arg name="paused" value="false"/>
+        <!--<arg name="physics" value="bullet" />  &lt;!&ndash; this line added &ndash;&gt;-->
+        <physics type='bullet'/>
+        <physics type='ode'>
+        <max_step_size>0.005</max_step_size>
+        <real_time_factor>1</real_time_factor>
+        <real_time_update_rate>200</real_time_update_rate>
+        <gravity>0 0 -9.8</gravity>
+        </physics>
+        <arg name="use_sim_time" value="true"/>
+        <!--<param name="robot_name" value="$(arg robot_name"/>   &lt;!&ndash;No Use...&ndash;&gt;-->
+        <arg name="gui" value="true"/>   <!-- false for no gazebo view -->
+        <arg name="recording" value="false"/>
+        <arg name="debug" value="false"/>
+    </include>
+    <!--$GAZEBO_MODEL_PATH-->
+
+    <!--Launch controllers-->
+    <group if="$(arg controllers)">
+        <include file="$(find robil_lihi)/launch/controllers.launch">
+            <!-- <arg name="rqt" value="$(arg rqt)"/> -->
+           <!--  <arg name="robot_name" value="$(arg robot_name)"/>-->
+           <!--  <arg name="controllers" value="$(arg controllers)"/>-->
+            <!-- <arg name="autorespawn" value="$(arg autorespawn)"/-->
+        </include>
+
+    </group>
+    <group if="$(arg forces)">
+        <include file="$(find robil_lihi)/launch/forces.launch">
+            <!-- <arg name="rqt" value="$(arg rqt)"/> -->
+           <!--  <arg name="robot_name" value="$(arg robot_name)"/>-->
+           <!--  <arg name="forces" value="$(arg forces)"/>-->
+
+
+            <!-- <arg name="autorespawn" value="$(arg autorespawn)"/-->
+        </include>
+
+    </group>
+
+    <group if="$(arg framework)">
+        <include file="$(find robil2conf)/launch/frameworkInit.launch"></include>
+	<include file="$(find bobcat_model)/launch/TF_pub_for_dynamic_arm_tracked.launch"/>
+    </group>
+
+</launch>
