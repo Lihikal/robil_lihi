@@ -1,8 +1,9 @@
 # robil_lihi
-This package is an addition to Robil packages.
+This package is an addition to Robil2 packages.
+Go to src->Simulation ans move the package "src" to robil_lihi
+Move packages Framework and 3party to robil_lihi
 
 In order to run it you should download gym:
-
 ```
 sudo pip install gym
 cd ~
