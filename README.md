@@ -33,7 +33,8 @@ The actions are engine commands: 1. Bobcat velocity (X axis direction)
                                  3. Bucket upward rotation velocity.
                                  4. Arm lifting and bobcat velocity combined.
                                  
-**Run PPO training**                                 
+**Run PPO training**  
+
 To get started, I recommend cloning [Chapter 19](https://github.com/PacktPublishing/Deep-Reinforcement-Learning-Hands-On-Second-Edition/tree/master/Chapter19)  of the code repository from [Deep Reinforcement Learning Hands-On Second Edition](https://www.zbukarf1.ga/book.php?id=xKdhDwAAQBAJ,) book.
 observation space and action space are continuous. 
 ```                             
