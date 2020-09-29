@@ -2,28 +2,14 @@
     <arg name="rqt" default="true"/>
     <arg name="robot_name" default="Bobby"/>
     <arg name="controllers" default="true"/>
-    <arg name="joystick_connected" default="true"/>
+    <arg name="joystick_connected" default="false"/>
     <arg name="joy_device" default="/dev/input/js0"/>
     <arg name="autorespawn" default="true"/>
 
-    <!--<node ns="$(arg robot_name)" name="SimulationControl" pkg="robil_lihi" type="C_simulation.py"
-          respawn="$(arg autorespawn)" output="screen"/>-->
-    <!--<node ns="$(arg robot_name)" name="bobcat_arm_plugin" pkg="robil_lihi" type="bobcat_arm_plugin" />-->
-    <!--<node ns="$(arg robot_name)" name="bobcat_drive_plugin" pkg="robil_lihi" type="bobcat_drive_plugin" />-->
-    <!--<node ns="$(arg robot_name)" name="bobcat_arm_ros_controller_interface" pkg="robil_lihi" type="bobcat_arm_ros_controller_interface_node" cwd="node" output="screen" />-->
 
-    <node ns="$(arg robot_name)" name="joint_state_publisher" pkg="robil_lihi" type="custom_joint_state_publisher.py"
-          respawn="$(arg autorespawn)" output="screen"/>
-    <node ns="$(arg robot_name)" name="control_hydraulics" pkg="robil_lihi" type="C_hydraulics.py"
-          respawn="$(arg autorespawn)" output="screen"/>
-    <!--<node ns="$(arg robot_name)" name="control_loader" pkg="robil_lihi" type="C_loader.py"
-          respawn="$(arg autorespawn)" output="screen"/>-->
-    <!--<node ns="$(arg robot_name)" name="control_brackets" pkg="robil_lihi" type="C_brackets.py"
-          respawn="$(arg autorespawn)" output="screen"/>-->
-    <node ns="$(arg robot_name)" name="control_wheels" pkg="robil_lihi" type="C_wheels.py"
-          respawn="$(arg autorespawn)" output="screen"/>
     <group if="$(arg joystick_connected)">
-        <node ns="$(arg robot_name)" name="joy_listener" pkg="robil_lihi" type="joy_listener.py" respawn="$(arg autorespawn)" output="screen"/>
+        <node ns="$(arg robot_name)" name="joy_listener" pkg="bobby" type="tracks_joy_listener.py"
+           respawn="$(arg autorespawn)" output="screen"/>
         <node respawn="$(arg autorespawn)" pkg="joy"
               type="joy_node" name="joy" >
             <param name="dev" type="string" value="$(arg joy_device)"/>

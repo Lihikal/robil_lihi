@@ -51,17 +51,6 @@
         </include>
 
     </group>
-    <group if="$(arg forces)">
-        <include file="$(find robil_lihi)/launch/forces.launch">
-            <!-- <arg name="rqt" value="$(arg rqt)"/> -->
-           <!--  <arg name="robot_name" value="$(arg robot_name)"/>-->
-           <!--  <arg name="forces" value="$(arg forces)"/>-->
-
-
-            <!-- <arg name="autorespawn" value="$(arg autorespawn)"/-->
-        </include>
-
-    </group>
 
     <group if="$(arg framework)">
         <include file="$(find robil2conf)/launch/frameworkInit.launch"></include>
